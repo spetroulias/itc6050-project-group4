@@ -2,6 +2,9 @@
 #  requirements.txt — All Python packages for this project
 # ============================================================
 
+wordcloud==1.9.3
+matplotlib==3.8.3
+
 # Data ingestion — fetches from API and loads into PostgreSQL
 dlt[postgres]==0.4.12
 
