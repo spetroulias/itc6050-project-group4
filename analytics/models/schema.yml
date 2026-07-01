@@ -1,0 +1,58 @@
+version: 2
+
+models:
+
+  - name: stg_books
+    description: "Cleaned book records - one row per book"
+    columns:
+
+      - name: book_key
+        description: "Unique book identifier"
+        tests:
+          - not_null
+
+      - name: title
+        description: "Book title"
+        tests:
+          - not_null
+
+      - name: first_publish_year
+        description: "Year the book was first published"
+        tests:
+          - not_null
+
+      - name: subject
+        description: "Subject category"
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - science
+                - history
+                - fiction
+                - philosophy
+                - technology
+
+      - name: decade
+        description: "Decade the book belongs to"
+        tests:
+          - not_null
+
+  - name: subject_decade_summary
+    description: "Aggregated book counts by subject and decade"
+    columns:
+
+      - name: subject
+        description: "Book subject"
+        tests:
+          - not_null
+
+      - name: decade
+        description: "Publication decade"
+        tests:
+          - not_null
+
+      - name: book_count
+        description: "Number of books in this subject and decade"
+        tests:
+          - not_null

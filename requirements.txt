@@ -1,0 +1,27 @@
+# ============================================================
+#  requirements.txt — All Python packages for this project
+# ============================================================
+
+# Data ingestion — fetches from API and loads into PostgreSQL
+dlt[postgres]==0.4.12
+
+# Data transformation — runs SQL models against PostgreSQL
+dbt-postgres==1.7.4
+
+# Dashboard — interactive web app
+streamlit==1.32.0
+
+# Data manipulation — used in dashboard
+pandas==2.2.0
+
+# HTTP requests — fetches data from Open Library API
+requests==2.31.0
+
+# PostgreSQL driver — connects Python to PostgreSQL
+psycopg2-binary==2.9.9
+
+# Read .env file variables into Python
+python-dotenv==1.0.1
+
+# Charts for Streamlit dashboard
+plotly==5.18.0

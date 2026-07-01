@@ -1,0 +1,29 @@
+# ============================================================
+#  .gitignore — Files that should NEVER go to GitHub
+# ============================================================
+
+# Secret credentials — NEVER commit this
+.env
+
+# Python virtual environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# dbt compiled files and logs (auto-generated, not needed on GitHub)
+analytics/target/
+analytics/dbt_packages/
+analytics/logs/
+
+# DuckDB files (if dlt creates any locally)
+*.duckdb
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/

@@ -1,0 +1,27 @@
+name: 'open_library'
+version: '1.0.0'
+config-version: 2
+
+# This must match the name in profiles.yml
+profile: 'open_library'
+
+# Folder locations
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Model configuration
+# staging models → write to "staging" schema in PostgreSQL
+# marts models   → write to "analytics" schema in PostgreSQL
+models:
+  open_library:
+    staging:
+      +schema: staging
+      +materialized: view        # staging = view (no data copy, just a SQL lens)
+    marts:
+      +schema: analytics
+      +materialized: table       # marts = actual table (data is physically stored)

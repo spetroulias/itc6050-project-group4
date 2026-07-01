@@ -1,0 +1,40 @@
+version: 2
+
+# ============================================================
+#  sources.yml — tells dbt WHERE to find your raw data
+#  These are the tables that pipeline.py (dlt) created
+# ============================================================
+
+sources:
+  - name: raw
+    description: "Raw tables loaded by dlt from the Open Library API"
+    schema: raw                   # the PostgreSQL schema name (matches dataset_name in pipeline.py)
+    tables:
+
+      - name: books
+        description: "Raw book records from Open Library search API"
+        columns:
+          - name: key
+            description: "Unique book identifier (e.g. /works/OL45883W)"
+          - name: title
+            description: "Book title"
+          - name: author_name
+            description: "List of author names"
+          - name: first_publish_year
+            description: "Year the book was first published"
+          - name: number_of_pages
+            description: "Median number of pages across editions"
+          - name: edition_count
+            description: "Total number of editions published"
+          - name: searched_subject
+            description: "The subject we searched to find this book (added by pipeline.py)"
+
+      - name: authors
+        description: "Raw author records from Open Library authors API"
+        columns:
+          - name: author_key
+            description: "Unique author identifier (e.g. OL23919A)"
+          - name: name
+            description: "Author full name"
+          - name: birth_date
+            description: "Author birth date (raw string from API)"
