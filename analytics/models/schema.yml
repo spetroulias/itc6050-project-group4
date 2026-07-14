@@ -32,6 +32,11 @@ models:
                 - fiction
                 - philosophy
                 - technology
+                - art 
+                - mathematics
+                - politics
+                - economics
+                - biography
 
       - name: decade
         description: "Decade the book belongs to"

@@ -1,28 +1,42 @@
-WITH raw_books AS (
+with raw_books as (
 
-    SELECT * FROM {{ source('raw', 'books') }}
+    select * from {{ source('raw', 'books') }}
 
 ),
 
-cleaned AS (
+deduplicated as (
 
-    SELECT
-        key                                         AS book_key,
+    select 
+        *,
+        -- Αριθμούμε τις εγγραφές για κάθε key. Η πρώτη θα πάρει το 1.
+        row_number() over (
+            partition by key 
+            order by first_publish_year::integer desc
+        ) as rn
+    from raw_books
+
+),
+
+cleaned as (
+
+    select
+        key                                         as book_key,
         title,
-        first_publish_year::INTEGER                 AS first_publish_year,
-        (first_publish_year::INTEGER / 10) * 10     AS decade,
-        searched_subject                            AS subject,
-        number_of_pages::INTEGER                    AS number_of_pages,
-        edition_count::INTEGER                      AS edition_count
+        first_publish_year::integer                 as first_publish_year,
+        (first_publish_year::integer / 10) * 10     as decade,
+        searched_subject                            as subject,
+        number_of_pages::integer                    as number_of_pages,
+        edition_count::integer                      as edition_count
 
-    FROM raw_books
+    from deduplicated
 
-    WHERE
-        first_publish_year IS NOT NULL
-        AND first_publish_year::INTEGER BETWEEN 1900 AND 2024
-        AND title IS NOT NULL
-        AND key IS NOT NULL
+    where
+        rn = 1 -- Κρατάμε ΜΟΝΟ τη μία μοναδική εγγραφή για κάθε key
+        and first_publish_year is not null
+        and first_publish_year::integer between 1900 and 2024
+        and title is not null
+        and key is not null
 
 )
 
-SELECT * FROM cleaned
+select * from cleaned
