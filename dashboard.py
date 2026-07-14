@@ -85,10 +85,18 @@ def load_authors():
     Used to generate the Top 10 Most Prolific Authors table.
     """
     conn = get_connection()
-    return pd.read_sql(
-        "SELECT name FROM raw.authors",
-        conn
-    )
+    return pd.read_sql("""
+        SELECT 
+            an.value AS author, 
+            COUNT(*) AS book_count
+        FROM 
+            raw.books__author_name an
+        GROUP BY 
+            an.value
+        ORDER BY 
+            book_count DESC
+        LIMIT 10;
+    """, conn)
 
 
 # ============================================================
@@ -145,7 +153,7 @@ filtered_raw = raw_books[
 #  MAIN DASHBOARD
 # ============================================================
 
-st.title("📚 Open Library Book Trends")
+st.title(" Open Library Book Trends")
 st.markdown("Analysing publishing trends across subjects and decades using Open Library data.")
 
 
@@ -163,7 +171,7 @@ with col1:
 
 with col2:
     st.metric(
-        label="📂 Subjects Covered",
+        label=" Subjects Covered",
         value=filtered_df["subject"].nunique()
     )
 
@@ -172,11 +180,11 @@ with col3:
         min_year = int(filtered_raw["first_publish_year"].min())
         max_year = int(filtered_raw["first_publish_year"].max())
         st.metric(
-            label="📅 Year Range",
+            label=" Year Range",
             value=f"{min_year} – {max_year}"
         )
     else:
-        st.metric(label="📅 Year Range", value="N/A")
+        st.metric(label=" Year Range", value="N/A")
 
 st.divider()
 
@@ -186,7 +194,7 @@ st.divider()
 #  Answers: which subjects have the most published books?
 # ----------------------------------------------------------
 
-st.subheader("📊 Most Published Subjects")
+st.subheader(" Most Published Subjects")
 
 subject_totals = (
     filtered_df
@@ -216,7 +224,7 @@ st.divider()
 #  Answers: is overall publishing volume growing over time?
 # ----------------------------------------------------------
 
-st.subheader("📈 Publishing Trend Over Time")
+st.subheader(" Publishing Trend Over Time")
 
 decade_totals = (
     filtered_df
@@ -244,7 +252,7 @@ st.divider()
 #  Answers: how has each subject's popularity changed over time?
 # ----------------------------------------------------------
 
-st.subheader("📉 Trends by Subject")
+st.subheader("Trends by Subject")
 
 fig3 = px.line(
     filtered_df,
@@ -265,27 +273,29 @@ st.divider()
 #  Answers: which authors appear most frequently in our dataset?
 # ----------------------------------------------------------
 
-st.subheader("✍️ Top 10 Most Prolific Authors")
+st.subheader(" Top 10 Most Prolific Authors")
 
 try:
-    authors_df = load_authors()
-    if not authors_df.empty:
-        top_authors = (
-            authors_df["name"]
-            .value_counts()
-            .head(10)
-            .reset_index()
-        )
+    # 1. Load pre-aggregated data from PostgreSQL (SQL performs the correct COUNT)
+    top_authors = load_authors()
+    
+    if not top_authors.empty:
+        # 2. Rename columns to look professional in the UI
+        # The load_authors() function returns 'author' and 'book_count'
         top_authors.columns = ["Author", "Book Count"]
+        
+        # 3. Adjust the index to start from 1 instead of 0
         top_authors.index = top_authors.index + 1
+        
+        # 4. Render the data table in Streamlit
         st.dataframe(top_authors, use_container_width=True)
     else:
         st.info("No author data available. Re-run the pipeline to load authors.")
-except Exception:
-    st.info("Author data not available.")
+except Exception as e:
+    # Print the actual exception message to make debugging easier if needed
+    st.info(f"Author data not available. (Error: {e})")
 
 st.divider()
-
 
 # ============================================================
 #  STRETCH GOAL 1 — Word Cloud of Most Common Subjects
@@ -293,7 +303,7 @@ st.divider()
 #  in the dataset. Generated from the raw books subject column.
 # ============================================================
 
-st.subheader("☁️ Word Cloud — Most Common Subjects")
+st.subheader(" Word Cloud — Most Common Subjects")
 
 if not filtered_raw.empty:
     # Count how many books belong to each subject
@@ -332,7 +342,7 @@ st.divider()
 #  publishing trends directly on the same chart.
 # ============================================================
 
-st.subheader("🔀 Compare Two Subjects Side by Side")
+st.subheader(" Compare Two Subjects Side by Side")
 
 all_subjects_list = sorted(df["subject"].unique().tolist())
 
@@ -366,9 +376,9 @@ else:
 
     kpi1, kpi2 = st.columns(2)
     with kpi1:
-        st.metric(label=f"📚 Total Books — {subject_a.title()}", value=f"{kpi_a:,}")
+        st.metric(label=f" Total Books — {subject_a.title()}", value=f"{kpi_a:,}")
     with kpi2:
-        st.metric(label=f"📚 Total Books — {subject_b.title()}", value=f"{kpi_b:,}")
+        st.metric(label=f" Total Books — {subject_b.title()}", value=f"{kpi_b:,}")
 
     # Line chart comparing both subjects across decades
     fig_comp = px.line(
@@ -410,7 +420,7 @@ st.divider()
 #  TABLE — Full mart model data
 # ----------------------------------------------------------
 
-st.subheader("📋 Full Summary Table")
+st.subheader(" Full Summary Table")
 st.dataframe(
     filtered_df.sort_values(["subject", "decade"]),
     use_container_width=True,
