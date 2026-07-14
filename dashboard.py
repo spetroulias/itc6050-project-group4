@@ -47,7 +47,7 @@ def get_connection():
         host=os.getenv("POSTGRES_HOST", "postgres"),
         database=os.getenv("POSTGRES_DB", "books_db"),
         user=os.getenv("POSTGRES_USER", "postgres"),
-        password=os.getenv("POSTGRES_PASSWORD", "books1234"),
+        password=os.environ["POSTGRES_PASSWORD"],
         port=int(os.getenv("POSTGRES_PORT", 5432))
     )
 
