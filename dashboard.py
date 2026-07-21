@@ -118,10 +118,13 @@ except Exception as e:
 st.sidebar.title("Filters")
 
 all_subjects = sorted(df["subject"].unique().tolist())
+
+# Added a fixed key to prevent state loss on re-run
 selected_subjects = st.sidebar.multiselect(
     "Select Subjects",
     options=all_subjects,
-    default=all_subjects
+    default=all_subjects,
+    key="selected_subjects_filter"
 )
 
 min_decade = int(df["decade"].min())
@@ -153,8 +156,15 @@ filtered_raw = raw_books[
 #  MAIN DASHBOARD
 # ============================================================
 
-st.title(" Open Library Book Trends")
+st.title("📚 Open Library Book Trends")
 st.markdown("Analysing publishing trends across subjects and decades using Open Library data.")
+
+# ----------------------------------------------------------
+#  CRITICAL SAFETY CHECK: Stop processing if DataFrames are empty
+# ----------------------------------------------------------
+if filtered_df.empty:
+    st.warning("⚠️ No data available for the selected filters. Please select more subjects or widen the decade range.")
+    st.stop()
 
 
 # ----------------------------------------------------------
@@ -171,30 +181,29 @@ with col1:
 
 with col2:
     st.metric(
-        label=" Subjects Covered",
+        label="🧪 Subjects Covered",
         value=filtered_df["subject"].nunique()
     )
 
 with col3:
-    if not filtered_raw.empty:
+    if not filtered_raw.empty and not filtered_raw["first_publish_year"].isna().all():
         min_year = int(filtered_raw["first_publish_year"].min())
         max_year = int(filtered_raw["first_publish_year"].max())
         st.metric(
-            label=" Year Range",
+            label="📅 Year Range",
             value=f"{min_year} – {max_year}"
         )
     else:
-        st.metric(label=" Year Range", value="N/A")
+        st.metric(label="📅 Year Range", value="N/A")
 
 st.divider()
 
 
 # ----------------------------------------------------------
 #  CHART 1 — Bar Chart: total books per subject
-#  Answers: which subjects have the most published books?
 # ----------------------------------------------------------
 
-st.subheader(" Most Published Subjects")
+st.subheader("📊 Most Published Subjects")
 
 subject_totals = (
     filtered_df
@@ -221,10 +230,9 @@ st.divider()
 
 # ----------------------------------------------------------
 #  CHART 2 — Line Chart: total books published per decade
-#  Answers: is overall publishing volume growing over time?
 # ----------------------------------------------------------
 
-st.subheader(" Publishing Trend Over Time")
+st.subheader("📈 Publishing Trend Over Time")
 
 decade_totals = (
     filtered_df
@@ -249,10 +257,9 @@ st.divider()
 
 # ----------------------------------------------------------
 #  CHART 3 — Line Chart: per-subject trend over decades
-#  Answers: how has each subject's popularity changed over time?
 # ----------------------------------------------------------
 
-st.subheader("Trends by Subject")
+st.subheader("📉 Trends by Subject")
 
 fig3 = px.line(
     filtered_df,
@@ -270,66 +277,54 @@ st.divider()
 
 # ----------------------------------------------------------
 #  TABLE — Top 10 most prolific authors
-#  Answers: which authors appear most frequently in our dataset?
 # ----------------------------------------------------------
 
-st.subheader(" Top 10 Most Prolific Authors")
+st.subheader("✍️ Top 10 Most Prolific Authors")
 
 try:
-    # 1. Load pre-aggregated data from PostgreSQL (SQL performs the correct COUNT)
     top_authors = load_authors()
     
     if not top_authors.empty:
-        # 2. Rename columns to look professional in the UI
-        # The load_authors() function returns 'author' and 'book_count'
         top_authors.columns = ["Author", "Book Count"]
-        
-        # 3. Adjust the index to start from 1 instead of 0
         top_authors.index = top_authors.index + 1
-        
-        # 4. Render the data table in Streamlit
         st.dataframe(top_authors, use_container_width=True)
     else:
         st.info("No author data available. Re-run the pipeline to load authors.")
 except Exception as e:
-    # Print the actual exception message to make debugging easier if needed
     st.info(f"Author data not available. (Error: {e})")
 
 st.divider()
 
+
 # ============================================================
 #  STRETCH GOAL 1 — Word Cloud of Most Common Subjects
-#  Visualises subject frequency — larger words appear more often
-#  in the dataset. Generated from the raw books subject column.
 # ============================================================
 
-st.subheader(" Word Cloud — Most Common Subjects")
+st.subheader("☁️ Word Cloud — Most Common Subjects")
 
 if not filtered_raw.empty:
-    # Count how many books belong to each subject
     subject_counts = (
         filtered_raw["searched_subject"]
         .value_counts()
         .to_dict()
-        # .to_dict() converts to {"science": 99, "history": 87, ...}
-        # WordCloud accepts a frequency dictionary directly
     )
 
-    # Generate the word cloud from subject frequencies
-    wc = WordCloud(
-        width=1200,
-        height=400,
-        background_color="white",
-        colormap="Blues",        # colour scheme — all shades of blue
-        max_font_size=120,       # largest word size
-        min_font_size=20         # smallest word size
-    ).generate_from_frequencies(subject_counts)
+    if subject_counts:
+        wc = WordCloud(
+            width=1200,
+            height=400,
+            background_color="white",
+            colormap="Blues",        
+            max_font_size=120,       
+            min_font_size=20         
+        ).generate_from_frequencies(subject_counts)
 
-    # Render using matplotlib and display in Streamlit
-    fig_wc, ax = plt.subplots(figsize=(14, 5))
-    ax.imshow(wc, interpolation="bilinear")
-    ax.axis("off")   # hide the x and y axes — not needed for a word cloud
-    st.pyplot(fig_wc)
+        fig_wc, ax = plt.subplots(figsize=(14, 5))
+        ax.imshow(wc, interpolation="bilinear")
+        ax.axis("off")   
+        st.pyplot(fig_wc)
+    else:
+        st.info("No data available for word cloud.")
 else:
     st.info("No data available for word cloud.")
 
@@ -338,49 +333,44 @@ st.divider()
 
 # ============================================================
 #  STRETCH GOAL 2 — Side by Side Subject Comparison
-#  Allows the user to select any two subjects and compare their
-#  publishing trends directly on the same chart.
 # ============================================================
 
-st.subheader(" Compare Two Subjects Side by Side")
+st.subheader("🔄 Compare Two Subjects Side by Side")
 
 all_subjects_list = sorted(df["subject"].unique().tolist())
 
-# Two dropdown selectors — one per subject to compare
 comp_col1, comp_col2 = st.columns(2)
 
 with comp_col1:
     subject_a = st.selectbox(
         "Subject A",
         options=all_subjects_list,
-        index=0   # default: first subject in the list
+        index=0   
     )
 
 with comp_col2:
     subject_b = st.selectbox(
         "Subject B",
         options=all_subjects_list,
-        index=1   # default: second subject in the list
+        index=min(1, len(all_subjects_list) - 1)   
     )
 
-# Filter the mart data to only the two selected subjects
 comparison_df = df[df["subject"].isin([subject_a, subject_b])]
 
 if subject_a == subject_b:
-    # Warn the user if they select the same subject twice
     st.warning("Please select two different subjects to compare.")
+elif comparison_df.empty:
+    st.info("No comparison data available for these specific subjects.")
 else:
-    # KPI comparison — total books per subject side by side
     kpi_a = int(comparison_df[comparison_df["subject"] == subject_a]["book_count"].sum())
     kpi_b = int(comparison_df[comparison_df["subject"] == subject_b]["book_count"].sum())
 
     kpi1, kpi2 = st.columns(2)
     with kpi1:
-        st.metric(label=f" Total Books — {subject_a.title()}", value=f"{kpi_a:,}")
+        st.metric(label=f"Total Books — {subject_a.title()}", value=f"{kpi_a:,}")
     with kpi2:
-        st.metric(label=f" Total Books — {subject_b.title()}", value=f"{kpi_b:,}")
+        st.metric(label=f"Total Books — {subject_b.title()}", value=f"{kpi_b:,}")
 
-    # Line chart comparing both subjects across decades
     fig_comp = px.line(
         comparison_df,
         x="decade",
@@ -397,13 +387,12 @@ else:
     fig_comp.update_traces(line_width=3)
     st.plotly_chart(fig_comp, use_container_width=True)
 
-    # Bar chart comparing both subjects per decade
     fig_bar_comp = px.bar(
         comparison_df,
         x="decade",
         y="book_count",
         color="subject",
-        barmode="group",   # side by side bars, not stacked
+        barmode="group",   
         labels={
             "book_count": "Number of Books",
             "decade": "Decade",
@@ -420,7 +409,7 @@ st.divider()
 #  TABLE — Full mart model data
 # ----------------------------------------------------------
 
-st.subheader(" Full Summary Table")
+st.subheader("📋 Full Summary Table")
 st.dataframe(
     filtered_df.sort_values(["subject", "decade"]),
     use_container_width=True,
